@@ -1,15 +1,12 @@
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 def convert_percent(x):   
    return float(x.strip('%')) / 100
 
 
-def select_season(df, season):
-   return df[df['Season'] == season]
-
-
-def find_two_consecutive_season(s1, s2, col):
+def find_two_consecutive_season(df, s1, s2, col):
    ls1 = []
    ls2 = []
    df1 = df[df['Season'] == s1]
@@ -28,23 +25,38 @@ def find_two_consecutive_season(s1, s2, col):
 
    return ls1, ls2
 
+def draw(df, col):
+   s1, s2 = collect_data(df, col)
+   plt.scatter(s1, s2)
+   plt.title(str(len(s1))+' points')
+   plt.xlabel('season ' + col)
+   plt.ylabel('season+1 '+col)
+   plt.show()
 
-def calculate_correlation(df, cols):   
-   result = []
+
+def calculate_correlation(s1, s2):
+   return np.corrcoef(s1, s2)[0][1]
+
+
+def collect_data(df, col):
    seasons = sorted(pd.unique(df['Season']))
+   s1 = []
+   s2 = []
+   for s in seasons:
+      ls1, ls2 = find_two_consecutive_season(df, s, s + 1, col)
+      s1.extend(ls1)
+      s2.extend(ls2)
+   return s1, s2
 
+def calculate_all_cols(df, cols):   
+   result = []
    for col in cols:
-      s1 = []
-      s2 = []
+      s1, s2 = collect_data(df, col)
+      result.append(calculate_correlation(s1, s2))
+   # combine and use string representing float with two decimals
+   print(np.column_stack((cols, ['%.2f' % elem for elem in result])))
 
-      for s in seasons:
-         ls1, ls2 = find_two_consecutive_season(s, s + 1, col)
-         s1.extend(ls1)
-         s2.extend(ls2)         
-
-      result.append(np.corrcoef(s1, s2)[0][1])
-
-   return result
+   
 
 
 df = pd.read_csv('csv/pitcher.csv',
@@ -105,16 +117,15 @@ df = pd.read_csv('csv/pitcher.csv',
 #                      'Hard%': convert_percent
 #                  })
 
-
-
-df.info()
+#df.info()
 df = df.drop(['Name','Team'], 1)
 
-cols = list(df.columns)
-cols.remove('Season')
-cols.remove('playerid')
-#cols = ['GB%', 'LD%', 'K%']
+# cols = list(df.columns)
+# cols.remove('Season')
+# cols.remove('playerid')
+cols = ['GB%', 'LD%', 'K%']
 
-result = calculate_correlation(df, cols)
+#draw(df, 'BABIP')
 
-np.column_stack((cols, result))
+result = calculate_all_cols(df, cols)
+
